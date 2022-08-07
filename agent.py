@@ -23,7 +23,7 @@ class Agent:
         action_size,
         seed,
         model_state_dict_path=None,  # enables loading of a trained agent
-        buffer_size=int(2**22),
+        buffer_size=int(2 ** 22),
         batch_size=512,
         gamma=0.99,
         tau=1e-2,
@@ -32,7 +32,10 @@ class Agent:
         learning_passes=16,  # number of learning passes
         starting_noise_factor=1,
         noise_decay=0.99,
-        update_every=2**4,
+        update_every=2 ** 4,
+        noise_theta=0.15,  # 0.32
+        noise_sigma=0.2,  # 0.32
+        n_agents=12,
     ):
         """DDPG agent
         This class instantiates a DDPG agent.
@@ -58,6 +61,7 @@ class Agent:
 
         self.state_size = state_size
         self.action_size = action_size
+        self.n_agents = n_agents
         self.seed = random.seed(seed)
 
         self.buffer_size = buffer_size
@@ -73,16 +77,8 @@ class Agent:
         self.last_episode_train = 0
 
         # Actor Network
-        self.actor_local = Actor(
-            state_size,
-            action_size,
-            seed,
-        ).to(device)
-        self.actor_target = Actor(
-            state_size,
-            action_size,
-            seed,
-        ).to(device)
+        self.actor_local = Actor(state_size, action_size, seed,).to(device)
+        self.actor_target = Actor(state_size, action_size, seed,).to(device)
         if model_state_dict_path:
             model_path = os.path.join(model_state_dict_path, "checkpoint_actor.pth")
             print(f"Loading actor from: {model_path}")
@@ -96,11 +92,15 @@ class Agent:
             state_size,
             action_size,
             seed,
+            batch_size=self.batch_size,
+            n_agents=self.n_agents,
         ).to(device)
         self.critic_target = Critic(
             state_size,
             action_size,
             seed,
+            batch_size=self.batch_size,
+            n_agents=self.n_agents,
         ).to(device)
         if model_state_dict_path:
             model_path = os.path.join(model_state_dict_path, "checkpoint_critic.pth")
@@ -118,7 +118,7 @@ class Agent:
         self.replay_buffer = ReplayBuffer(action_size, seed, buffer_size, batch_size)
 
         # Noise process
-        self.noise = OUNoise(action_size, seed)
+        self.noise = OUNoise(action_size, seed, theta=noise_theta, sigma=noise_sigma,)
 
     def act(self, state, noise=True):
         """Returns actions for given state as per current policy."""

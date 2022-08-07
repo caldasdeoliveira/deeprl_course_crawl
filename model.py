@@ -54,6 +54,8 @@ class Critic(nn.Module):
         fcs1_units=128,
         fc2_units=256,
         fc3_units=128,
+        batch_size = 128,
+        n_agents = 12,
     ):
         """Initialize parameters and build model.
         Params
@@ -66,6 +68,8 @@ class Critic(nn.Module):
         """
         self.state_size = state_size
         self.action_size = action_size
+        self.batch_size = batch_size
+        self.n_agents = n_agents
         super(Critic, self).__init__()
         self.seed = torch.manual_seed(seed)
         self.fcs1 = nn.Linear(state_size, fcs1_units)
@@ -86,4 +90,4 @@ class Critic(nn.Module):
         x = torch.cat((xs, action), dim=1)
         x = F.gelu(self.fc2(x))
         x = F.gelu(self.fc3(x))
-        return torch.reshape(self.fc4(x), (self.action_size, 12))
+        return torch.reshape(self.fc4(x), (self.batch_size, self.n_agents))

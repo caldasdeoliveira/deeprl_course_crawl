@@ -48,7 +48,24 @@ print(f"state size: {state_size}")
 # +
 from agent import Agent
 
-agent = Agent(state_size, action_size, seed)
+agent = Agent(
+    state_size,
+    action_size,
+    seed,
+    buffer_size=int(2**20),
+    batch_size=128,
+    gamma=0.99,
+    tau=1e-2,
+    lr_actor=1e-3,
+    lr_critic=1e-2,
+    learning_passes=16,
+    starting_noise_factor=1,
+    noise_decay=0.99,
+    update_every=2**4,
+    noise_theta=0.05,
+    noise_sigma=0.1,
+    n_agents=num_agents,
+)
 # -
 
 # ## Training
@@ -57,13 +74,13 @@ agent = Agent(state_size, action_size, seed)
 from collections import namedtuple, deque
 
 
-def ddpg(n_episodes=100000, window_len=100, goal=30, print_every=1):
+def ddpg(n_episodes=10000, window_len=100, goal=30, print_every=1):
     original_goal = goal
     scores_deque = deque(maxlen=window_len)
     scores = []
     avg_scores = []
     for i_episode in range(1, n_episodes + 1):
-        if i_episode % 1000 == 0:
+        if i_episode % 100 == 0:
             env_info = env.reset(train_mode=False)[brain_name]  # reset the environment
         else:
             env_info = env.reset(train_mode=True)[brain_name]  # reset the environment
@@ -80,7 +97,7 @@ def ddpg(n_episodes=100000, window_len=100, goal=30, print_every=1):
             rewards = env_info.rewards  # get reward (for each agent)
             dones = env_info.local_done  # see if episode finished
 
-            agent.step(states, actions, rewards, next_states, dones)
+            agent.step(states, actions, rewards, next_states, dones, i_episode)
             states = next_states
             score += rewards  # update the score (for each agent)
             if np.any(dones):  # exit loop if episode finished
@@ -88,6 +105,7 @@ def ddpg(n_episodes=100000, window_len=100, goal=30, print_every=1):
         scores_deque.append(score)
         scores.append(score)
         avg_scores.append(np.mean(scores_deque))
+
         if avg_scores[-1] >= goal and len(scores_deque) == window_len:
             if goal == original_goal:
                 print(
@@ -96,12 +114,16 @@ def ddpg(n_episodes=100000, window_len=100, goal=30, print_every=1):
                 )
             else:
                 print(f"\nSaving better agent with Average Score: {avg_scores[-1]:.2f}")
+            
             torch.save(agent.actor_local.state_dict(), "checkpoint_actor.pth")
             torch.save(agent.critic_local.state_dict(), "checkpoint_critic.pth")
+            
             goal = int(np.mean(scores_deque)) + 1
+        
         if i_episode % print_every == 0:
             print(
-                "\rEpisode {}\tAverage Score: {:.2f}".format(i_episode, avg_scores[-1])
+                f"Episode {i_episode}\t100 Episode Average Score: {avg_scores[-1]:.2f}"
+                f"\n\t\tEpisode Score: {np.mean(score):.2f}"
             )
 
     return scores, avg_scores
@@ -128,3 +150,8 @@ plt.xlabel("Episode #")
 plt.show()
 
 env.close()
+
+torch.save(agent.actor_local.state_dict(), "checkpoint_actor.pth")
+torch.save(agent.critic_local.state_dict(), "checkpoint_critic.pth")
+
+
