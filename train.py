@@ -53,11 +53,11 @@ agent = Agent(
     action_size,
     seed,
     buffer_size=int(2**20),
-    batch_size=128,
+    batch_size=256,
     gamma=0.99,
-    tau=1e-2,
-    lr_actor=1e-3,
-    lr_critic=1e-2,
+    tau=1e-3,
+    lr_actor=1e-4,
+    lr_critic=1e-3,
     learning_passes=16,
     starting_noise_factor=1,
     noise_decay=0.99,
@@ -74,18 +74,17 @@ agent = Agent(
 from collections import namedtuple, deque
 
 
-def ddpg(n_episodes=10000, window_len=100, goal=30, print_every=1):
+def ddpg(n_episodes=20000, window_len=100, goal=30, print_every=1):
     original_goal = goal
     scores_deque = deque(maxlen=window_len)
     scores = []
     avg_scores = []
     for i_episode in range(1, n_episodes + 1):
-        if i_episode % 100 == 0:
+        if i_episode % 100000 == 0:
             env_info = env.reset(train_mode=False)[brain_name]  # reset the environment
         else:
             env_info = env.reset(train_mode=True)[brain_name]  # reset the environment
         states = env_info.vector_observations  # get the current state (for each agent)
-        # agent.reset()
         score = np.zeros(num_agents)  # initialize the score (for each agent)
         while True:
             actions = agent.act(states)
@@ -150,8 +149,5 @@ plt.xlabel("Episode #")
 plt.show()
 
 env.close()
-
-torch.save(agent.actor_local.state_dict(), "checkpoint_actor.pth")
-torch.save(agent.critic_local.state_dict(), "checkpoint_critic.pth")
 
 
